@@ -49,10 +49,8 @@ class Agent(object):
         self.gamma = 0.1  # 0.99
         self.epsilon = 1.0  # 1.0
 
-        self.M_episodes = 100
-
+        self.M_episodes = 10
         self.T_episodes = 10
-        self.T_episode_start = 101
 
         # learned parameters
         self.minibatch = 32  # 32
@@ -74,8 +72,8 @@ class Agent(object):
     def dqn_nn(self):
         # create nn
         nn = tf.keras.Sequential([
-            tf.keras.layers.Dense(64, input_shape=self.columns, activation='relu'),
-            tf.keras.layers.Dense(64, input_shape=self.columns, activation='relu'),
+            tf.keras.layers.Dense(64, input_shape=(self.columns,), activation='relu'),
+            tf.keras.layers.Dense(64, input_shape=(self.columns,), activation='relu'),
             tf.keras.layers.Dense(64, activation='relu'),
             tf.keras.layers.Dense(3, activation=None)
         ])
@@ -86,8 +84,8 @@ class Agent(object):
         return nn
 
     def draw_rewards(self, rewards, episodes, filename, title, flag, average):
-        x = np.arange(0, episodes - 1, 1)
-        what_to_draw = len(rewards) - episodes + 1
+        x = np.arange(0, episodes, 1)
+        what_to_draw = len(rewards) - episodes
         rewards_to_draw = list(rewards[what_to_draw:])
 
         avg_reward = str(round(sum(rewards) / episodes, 1))
@@ -231,7 +229,7 @@ class Agent(object):
         # now let's see what we've learned
 
         for q in range(self.T_episodes):
-            state = self.env.start(self.T_episode_start + q)
+            state = self.env.start(self.M_episodes + 1 + q)
             # state = self.dict_to_list(dict_state)
             i = 0
             end_flag = False
