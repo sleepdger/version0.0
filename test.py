@@ -12,12 +12,15 @@ class Agent(object):
     def __init__(self):
         self.whoami = 'agent'
         self.env = en.Environment()
-        self.columns = self.env.loaddata() + self.env.derivative_columns
+        self.columns = self.env.loaddata()
+        self.columns_to_load = [1, 9]
 
         # general parameters
         self.ep_step_cap = 1000
         self.debug = True
-        self.num_actions = 3  # ['Sell', 'Do nothing', 'Buy']
+        self.detailed_debug = False
+        self.num_actions = 3
+        self.actions_dict = ['Sell', 'Do nothing', 'Buy']
 
         self.rewards = []
         self.rewards_100 = []
@@ -26,14 +29,14 @@ class Agent(object):
         self.D_memory = []
 
         # parameters
-        self.gamma = 0.1  # 0.99
-        self.epsilon = 1.0  # 1.0
+        self.gamma = 1.0  # 0.99
 
         self.M_episodes = 1000
         self.T_episodes = 100
 
         # learned parameters
         self.minibatch = 32  # 32
+        self.epsilon = 1.0  # 1.0
         self.epsilon_decay = 0.995  # 0.997
         self.epsilon_bound = 0.1  # 0.1
         self.C_step = 1  # 200
@@ -52,9 +55,9 @@ class Agent(object):
     def dqn_nn(self):
         # create nn
         nn = tf.keras.Sequential([
-            tf.keras.layers.Dense(64, input_shape=(self.columns,), activation='relu'),
-            tf.keras.layers.Dense(64, input_shape=(self.columns,), activation='relu'),
-            tf.keras.layers.Dense(64, activation='relu'),
+            tf.keras.layers.Dense(32, input_shape=(len(self.columns_to_load) + self.env.derivative_columns,), activation='relu'),
+            tf.keras.layers.Dense(32, input_shape=(len(self.columns_to_load) + self.env.derivative_columns,), activation='relu'),
+            tf.keras.layers.Dense(32, activation='relu'),
             tf.keras.layers.Dense(3, activation=None)
         ])
 
@@ -89,6 +92,12 @@ class Agent(object):
         plt.savefig(filename_string + "_" + filename)
         plt.show()
 
+    def choose_columns(self, array):
+        new_array = []
+        for i in self.columns_to_load:
+            new_array.append(array[i - 1])
+        return np.array(new_array)
+
     def training(self):
 
         episode = 1
@@ -98,7 +107,10 @@ class Agent(object):
         while episode <= self.M_episodes:
 
             first_state, derivative_state = self.env.start(episode)
-            this_state = np.concatenate((first_state, derivative_state))
+            this_state = np.concatenate((self.choose_columns(first_state), derivative_state))
+
+            if self.detailed_debug:
+                print('EPISODE', episode, 'BEGIN')
 
             end_flag = False
             t = 0
@@ -110,21 +122,38 @@ class Agent(object):
             # run episode
             while (t < self.ep_step_cap) and not end_flag:
                 t += 1
+                prev_state = this_state
+
+                if self.detailed_debug:
+                    print('   EPISODE', episode, 'STEP', t)
+                    print('     this_state', this_state)
 
                 # With probability e select a random action
                 my_r = np.random.random()
                 if my_r < self.epsilon:
                     action = np.random.randint(-1, 2)
+                    if self.detailed_debug:
+                        print('     random action', self.actions_dict[action + 1])
                 else:
                     Q_value = self.Q_nn.predict_on_batch(np.array([this_state]))
+
                     # convert action range (0, 1, 2) to (-1, 0, 1)
                     action = np.argmax(Q_value[0]) - 1
+                    if self.detailed_debug:
+                        print('     REAL action distribution')
+                        print('         Buy:', Q_value[0][2])
+                        print('         Hold:', Q_value[0][1])
+                        print('         Sell:', Q_value[0][0])
+                        print('         Resulting action:', self.actions_dict[action + 1])
 
                 action_stats[action+1] += 1
 
                 # Execute action a_t in emulator and observe reward r_t and image x_t+1
                 first_state, derivative_state, reward, end_flag = self.env.action(action)
-                next_state = np.concatenate((first_state, derivative_state))
+                next_state = np.concatenate((self.choose_columns(first_state), derivative_state))
+
+                if self.detailed_debug:
+                    print('     reward for the action:', reward)
 
                 total_reward += reward
 
@@ -182,6 +211,19 @@ class Agent(object):
                 values_batch_np = np.array([i for i in values_batch])
                 self.Q_nn.train_on_batch(this_state_batch, values_batch_np)
 
+                # printing statistics
+                if self.detailed_debug:
+                    Q_value = self.Q_nn.predict_on_batch(np.array([prev_state]))
+
+                    # convert action range (0, 1, 2) to (-1, 0, 1)
+                    action = np.argmax(Q_value[0]) - 1
+                    if self.detailed_debug:
+                        print('     UPDATED action distribution')
+                        print('         Buy:', Q_value[0][2])
+                        print('         Hold:', Q_value[0][1])
+                        print('         Sell:', Q_value[0][0])
+                        print('         Resulting action:', self.actions_dict[action + 1])
+
                 # Every C steps reset target weights
                 c += 1
                 if c >= self.C_step:
@@ -215,7 +257,7 @@ class Agent(object):
 
         for q in range(self.T_episodes):
             first_state, derivative_state = self.env.start(self.M_episodes + 1 + q)
-            state = np.concatenate((first_state, derivative_state))
+            state = np.concatenate((self.choose_columns(first_state), derivative_state))
             i = 0
             end_flag = False
             t_reward = 0
@@ -230,7 +272,7 @@ class Agent(object):
 
                 # perform action
                 first_state, derivative_state, reward, end_flag = self.env.action(action)
-                state = np.concatenate((first_state, derivative_state))
+                state = np.concatenate((self.choose_columns(first_state), derivative_state))
 
                 action_stats[action+1] += 1
                 t_reward += reward
