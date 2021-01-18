@@ -8,6 +8,10 @@ class Environment(object):
         self.start_balance = 1000
         self.balance = 1000
         self.stock = 0
+
+        # number of calculated additional columns
+        self.derivative_columns = 1
+
         self.fee = 0.0005
         # Массив решений action -1 0 1 и stock -1 0 1
         self.scheme = [[-1, -1, 1], [-1, 0, 1], [-1, 1, 1]]
@@ -58,9 +62,9 @@ class Environment(object):
         self.load_episod(episode_num)
 
         # На старте запускаем action с 0
-        array, reward, end_flag = self.action(0)
+        array, derivative_array, reward, end_flag = self.action(0)
 
-        return array
+        return array, derivative_array
 
     def action(self, action):
         end_flag = False
@@ -70,6 +74,8 @@ class Environment(object):
             end_flag = True
 
         # Новый остаток
+        if self.stock > 1 or action > 1:
+            print(self.cur_ep)
         new_stock = self.scheme[self.stock + 1][action + 1]
         diff_stock = new_stock - self.stock
 
@@ -83,11 +89,11 @@ class Environment(object):
         self.stock = new_stock
 
         array = self.dict_to_list(array)
+        derivative_array = np.array([new_stock])
 
-        return array, reward, end_flag
+        return array, derivative_array, reward, end_flag
 
-        pass
-
+#
 # env = Environment()
 # # Получаем данные
 # env.loaddata()

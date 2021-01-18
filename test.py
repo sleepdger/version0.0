@@ -8,31 +8,11 @@ from tensorflow.python.framework.ops import disable_eager_execution
 tf.compat.v1.disable_eager_execution()
 disable_eager_execution()
 
-# class Environment(object):
-#     def __init__(self):
-#         self.whoami = 'environment'
-#
-#     def start(self, episode_num):
-#
-#         array = np.array([episode_num, episode_num, episode_num, episode_num])
-#
-#         return array
-#
-#     def action(self, agent_action):
-#         # now let's see what we've learned
-#         array = np.array([agent_action, agent_action, agent_action, agent_action])
-#         end_flag = False
-#         reward = np.random.random() * 50 - 100
-#
-#         return array, reward, end_flag
-#
-#         pass
-
 class Agent(object):
     def __init__(self):
         self.whoami = 'agent'
         self.env = en.Environment()
-        self.columns = self.env.loaddata()
+        self.columns = self.env.loaddata() + self.env.derivative_columns
 
         # general parameters
         self.ep_step_cap = 1000
@@ -49,8 +29,8 @@ class Agent(object):
         self.gamma = 0.1  # 0.99
         self.epsilon = 1.0  # 1.0
 
-        self.M_episodes = 10
-        self.T_episodes = 10
+        self.M_episodes = 1000
+        self.T_episodes = 100
 
         # learned parameters
         self.minibatch = 32  # 32
@@ -117,13 +97,15 @@ class Agent(object):
 
         while episode <= self.M_episodes:
 
-            this_state = self.env.start(episode)
+            first_state, derivative_state = self.env.start(episode)
+            this_state = np.concatenate((first_state, derivative_state))
 
             end_flag = False
             t = 0
             total_reward = 0.0
             len_D_flag = False
             len_D = 0
+            action_stats = [0,0,0]
 
             # run episode
             while (t < self.ep_step_cap) and not end_flag:
@@ -138,8 +120,11 @@ class Agent(object):
                     # convert action range (0, 1, 2) to (-1, 0, 1)
                     action = np.argmax(Q_value[0]) - 1
 
+                action_stats[action+1] += 1
+
                 # Execute action a_t in emulator and observe reward r_t and image x_t+1
-                next_state, reward, end_flag = self.env.action(action)
+                first_state, derivative_state, reward, end_flag = self.env.action(action)
+                next_state = np.concatenate((first_state, derivative_state))
 
                 total_reward += reward
 
@@ -220,7 +205,7 @@ class Agent(object):
             # printing statistics about finished episode
             if self.debug:
                 # self.env.render()
-                print('total_reward', total_reward, 'episode', episode)
+                print('total_reward', total_reward, 'episode', episode, 'Stats: buy', action_stats[2], 'hold', action_stats[1], 'sell', action_stats[0], 'total', sum(action_stats))
 
             # increasing episode counter
             episode += 1
@@ -229,11 +214,12 @@ class Agent(object):
         # now let's see what we've learned
 
         for q in range(self.T_episodes):
-            state = self.env.start(self.M_episodes + 1 + q)
-            # state = self.dict_to_list(dict_state)
+            first_state, derivative_state = self.env.start(self.M_episodes + 1 + q)
+            state = np.concatenate((first_state, derivative_state))
             i = 0
             end_flag = False
             t_reward = 0
+            action_stats = [0, 0, 0]
 
             while (i < self.ep_step_cap) and not end_flag:
                 i += 1
@@ -243,12 +229,14 @@ class Agent(object):
                 action = np.argmax(Q_value[0]) - 1
 
                 # perform action
-                state, reward, end_flag = self.env.action(action)
-                # state = self.dict_to_list(dict_state)
+                first_state, derivative_state, reward, end_flag = self.env.action(action)
+                state = np.concatenate((first_state, derivative_state))
+
+                action_stats[action+1] += 1
                 t_reward += reward
 
             if self.debug:
-                print('t_reward', t_reward, 'episode', q)
+                print('t_reward', t_reward, 'episode', q, 'Stats: buy', action_stats[2], 'hold', action_stats[1], 'sell', action_stats[0], 'total', sum(action_stats))
 
             self.trained_rewards.append(t_reward)
 
@@ -258,5 +246,3 @@ my_agent.draw_rewards(my_agent.rewards, my_agent.M_episodes, "training_tr.png", 
                       my_agent.rewards_100_avg)
 my_agent.testing()
 my_agent.draw_rewards(my_agent.trained_rewards, my_agent.T_episodes, "running_tr.png", 'Trained agent', True, [])
-
-
