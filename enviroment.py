@@ -9,7 +9,6 @@ class Environment(object):
         self.start_balance = 1000
         self.balance = 1000
         self.stock = 0
-        self.debug = False
 
         # number of calculated additional columns
         self.derivative_columns = 1
@@ -75,28 +74,27 @@ class Environment(object):
         new_stock = self.scheme[self.stock + 1][action + 1]
         diff_stock = new_stock - self.stock
 
-        cur_price = self.array["price"]
+        old_price = self.array["price"]
 
         # Расчет комиссии с транзакции
         if diff_stock != 0:
-            trans_fee = abs(diff_stock) * float(cur_price) * self.fee
-            self.balance = self.balance - trans_fee - diff_stock * float(cur_price)
-
-        new_total = self.balance + new_stock * float(cur_price)
-        reward = new_total - self.total
-
-        if self.debug:
-            print('action', action, 'new_stock', new_stock, 'diff_stock', diff_stock, 'cur_price', cur_price,
-                  'trans_fee', f'{trans_fee:.4f}', 'reward', f'{reward:.4f}', 'new_total', f'{new_total:.4f}')
-
-        self.total = new_total
-        self.stock = new_stock
+            trans_fee = abs(diff_stock) * float(old_price) * self.fee
+            self.balance = self.balance - trans_fee - diff_stock * float(old_price)
 
         end_flag = False
         self.array = self.cur_ep.pop(0)
 
         if len(self.cur_ep) == 0:
             end_flag = True
+
+        # Total и reward считаем уже по новой цене
+        new_total = self.balance + new_stock * float(self.array["price"])
+        reward = new_total - self.total
+
+        # print('action', action, 'new_stock', new_stock, 'diff_stock', diff_stock, 'old_price', old_price, 'trans_fee', f'{trans_fee:.4f}', 'new_price', self.array["price"], 'reward', f'{reward:.4f}', 'new_total', f'{new_total:.4f}')
+
+        self.total = new_total
+        self.stock = new_stock
 
         array = self.dict_to_list(self.array)
         derivative_array = np.array([new_stock])
