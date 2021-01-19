@@ -29,10 +29,10 @@ class Agent(object):
         self.D_memory = []
 
         # parameters
-        self.gamma = 1.0  # 0.99
+        self.gamma = 0.95  # 0.99
 
-        self.M_episodes = 1000
-        self.T_episodes = 100
+        self.M_episodes = 10
+        self.T_episodes = 10
 
         # learned parameters
         self.minibatch = 32  # 32
