@@ -25,14 +25,14 @@ class Environment(object):
 
             for row in reader:
                 for value in row:
-                    row[value] = row[value].replace(",",".")
-                    row[value] = row[value].replace(" ","")
+                    row[value] = row[value].replace(",", ".")
+                    row[value] = row[value].replace(" ", "")
                 if columns == 0:
                     columns = len(row)
 
                 self.data.append(row)
 
-        return columns-1
+        return columns - 1
 
     def load_episod(self, num=1):
         self.cur_ep = []
@@ -91,8 +91,6 @@ class Environment(object):
         new_total = self.balance + new_stock * float(self.array["price"])
         reward = new_total - self.total
 
-        # print('action', action, 'new_stock', new_stock, 'diff_stock', diff_stock, 'old_price', old_price, 'trans_fee', f'{trans_fee:.4f}', 'new_price', self.array["price"], 'reward', f'{reward:.4f}', 'new_total', f'{new_total:.4f}')
-
         self.total = new_total
         self.stock = new_stock
 
@@ -100,25 +98,3 @@ class Environment(object):
         derivative_array = np.array([new_stock])
 
         return array, derivative_array, reward, end_flag
-
-# env = Environment()
-# # Получаем данные
-# env.loaddata()
-#
-# start = env.start(1)
-# print(start)
-# print(env.total)
-#
-# #Запускаем Action
-# action = env.action(-1)
-# print(action)
-# print(env.total)
-# action = env.action(0)
-# print(action)
-# print(env.total)
-# action = env.action(0)
-# print(action)
-# print(env.total)
-# action = env.action(1)
-# print(action)
-# print(env.total)

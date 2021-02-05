@@ -1,5 +1,22 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
-arr1 = np.array([2.2864e+02,  1.7369e+05, -6.4230e+04])
+# epsilon_decay = 0.9
+# epsilon_bound = 0.1
+# epsilon = 1.0
+# M_episodes = 100
+# epsilon_array = []
+#
+# for i in range(M_episodes):
+#     epsilon *= epsilon_decay
+#     if epsilon < epsilon_bound:
+#         epsilon = epsilon_bound
+#     epsilon_array.append(epsilon)
+#
+# plt.plot(epsilon_array)
+# plt.show()
 
-print(np.round(arr1, 0))
+a = np.array([[0, 1, 2]])
+print(a)
+
+

@@ -1,81 +1,66 @@
-# Feb 3 version
 import numpy as np
 
 class Environment(object):
     def __init__(self):
         self.whoami = 'environment'
         self.data = []
-        self.cur_ep = []
-        self.array = []
-        self.start_balance = 1000
-        self.balance = 1000
-        self.stock = 0
+        self.episode_length = 1000
+        self.data_length = int(100 * 1.2 * self.episode_length)
+        self.episode_step = 0
+        self.episode_num = 0
 
-        # number of calculated additional columns
-        self.derivative_columns = 1
+        self.start_balance = 1000
+        self.start_stock = 0
+
+        self.balance = 1000
+        self.total = 1000
+        self.stock = 0
 
         self.fee = 0.0005
-        # Массив решений action -1 0 1 и stock -1 0 1
-        self.scheme = [[-1, -1, 1], [-1, 0, 1], [-1, 1, 1]]
+
+        # Массив решений action и stock
+        self.scheme = [[-1, -1, 1],  # stock = -1
+                       [0, 0, 1],  # stock = 0
+                       [0, 1, 1]]  # stock = 1
 
     def loaddata(self):
-        columns = 0
-        import csv
-        with open("sberdata_leak.csv", newline='') as csvfile:
-            reader = csv.DictReader(csvfile, delimiter=";")
 
-            for row in reader:
-                for value in row:
-                    row[value] = row[value].replace(",",".")
-                    row[value] = row[value].replace(" ","")
-                if columns == 0:
-                    columns = len(row)
+        array = np.random.rand(2, self.data_length)
+        array[0] = array[0] * 100.0 + 200.0
+        array[1] = 0.0
+        array = np.round(np.transpose(array), 2)
 
-                self.data.append(row)
+        i = 0
+        while i + 1 < len(array):
+            array[i][1] = array[i + 1][0] - array[i][0]
+            i += 1
 
-        return columns-1
+        self.data = np.copy(array)
 
-    def load_episod(self, num=1):
-        self.cur_ep = []
-
-        for row in self.data:
-            if int(row["episod"]) == num:
-                self.cur_ep.append(row)
-
-    def dict_to_list(self, array_dict):
-
-        array_list = []
-
-        for key in array_dict:
-            array_list.append(float(array_dict[key]))
-
-        array_list.pop(0)
-        np_array = np.array(array_list)
-
-        return np_array
+        return len(array[0]) + 1
 
     def start(self, episode_num):
-        array = []
-        self.balance = 1000
-        self.stock = 0
-        self.total = self.balance
 
-        # Загружаем новый эпизод
-        self.load_episod(episode_num)
+        self.total = self.start_balance
+        self.balance = self.start_balance
+        self.stock = self.start_stock
+        self.episode_step = 0
+        self.episode_num = episode_num
 
-        # На старте запускаем action с 0
-        self.array = self.cur_ep.pop(0)
-        array = self.dict_to_list(self.array)
-
-        return array, [0]
+        return self.data[episode_num * self.episode_length], self.stock
 
     def action(self, action):
-        # Новый остаток
-        trans_fee = 0
+
+        self.episode_step += 1
+        current_step = self.episode_num * self.episode_length + self.episode_step
+        prev_state = self.data[current_step - 1]
+        new_state = self.data[current_step]
+
         new_stock = self.scheme[self.stock + 1][action + 1]
         diff_stock = new_stock - self.stock
 
-        old_price = self.array["price"]
+        old_price = prev_state[0]
+        new_price = new_state[0]
 
         # Расчет комиссии с транзакции
         if diff_stock != 0:
@@ -83,43 +68,15 @@ class Environment(object):
             self.balance = self.balance - trans_fee - diff_stock * float(old_price)
 
         end_flag = False
-        self.array = self.cur_ep.pop(0)
 
-        if len(self.cur_ep) == 0:
+        if self.episode_step == self.episode_length:
             end_flag = True
 
         # Total и reward считаем уже по новой цене
-        new_total = self.balance + new_stock * float(self.array["price"])
+        new_total = self.balance + new_stock * float(new_price)
         reward = new_total - self.total
-
-        # print('action', action, 'new_stock', new_stock, 'diff_stock', diff_stock, 'old_price', old_price, 'trans_fee', f'{trans_fee:.4f}', 'new_price', self.array["price"], 'reward', f'{reward:.4f}', 'new_total', f'{new_total:.4f}')
 
         self.total = new_total
         self.stock = new_stock
 
-        array = self.dict_to_list(self.array)
-        derivative_array = np.array([new_stock])
-
-        return array, derivative_array, reward, end_flag
-
-# env = Environment()
-# # Получаем данные
-# env.loaddata()
-#
-# start = env.start(1)
-# print(start)
-# print(env.total)
-#
-# #Запускаем Action
-# action = env.action(-1)
-# print(action)
-# print(env.total)
-# action = env.action(0)
-# print(action)
-# print(env.total)
-# action = env.action(0)
-# print(action)
-# print(env.total)
-# action = env.action(1)
-# print(action)
-# print(env.total)
+        return new_state, self.stock, reward, end_flag

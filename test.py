@@ -1,6 +1,6 @@
 import numpy as np
-import enviroment as en
-import math
+# import enviroment as en
+import enviroment_v2 as en
 import random
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -13,13 +13,11 @@ class Agent(object):
         self.whoami = 'agent'
         self.env = en.Environment()
         self.columns = self.env.loaddata()
-        self.columns = 3
-        self.columns_to_load = [1, 9]
 
         # general parameters
         self.ep_step_cap = 1000
         self.debug = True
-        self.detailed_debug = True
+        self.detailed_debug_episode = 0
         self.num_actions = 3
         self.actions_dict = ['Sell', 'Do nothing', 'Buy']
 
@@ -30,28 +28,24 @@ class Agent(object):
         self.D_memory = []
 
         # parameters
-        self.gamma = 0.95  # 0.99
-
         self.M_episodes = 100
         self.T_episodes = 10
 
         # learned parameters
-        self.minibatch = 32  # 32
+        self.gamma = 0.0  # random price change
+        self.batch_training = False
+        self.minibatch = 32
         self.epsilon = 1.0  # 1.0
-        self.epsilon_decay = 0.995  # 0.997
+        self.epsilon_decay = 0.9  # 0.9 for 100 training episodes
         self.epsilon_bound = 0.1  # 0.1
-        self.C_step = 1  # 200
-
-        # tuning parameters
-        self.alpha = 0.005  # 0.001
-        self.D_N = 40000  # 40000
+        self.C_step = 10
+        self.alpha = 0.1
+        self.D_N = 10000
 
         # Initialize action-value function Q
         self.Q_nn = self.dqn_nn()
         # Initialize target action-value function ^Q
         self.Q_target_nn = self.dqn_nn()
-
-
 
     def dqn_nn(self):
         # create nn
@@ -92,72 +86,56 @@ class Agent(object):
         plt.savefig(filename_string + "_" + filename)
         plt.show()
 
-    def choose_columns(self, array_f, array_d):
-
-        new_array = [array_f[8] - array_f[0], array_f[0]]
-
-        # for i in self.columns_to_load:
-        #     new_array.append(array_f[i - 1])
-
-        return np.concatenate((np.array(new_array), array_d))
-
     def training(self):
 
-        episode = 1
+        episode = 0
         c = 0
         epsilon_decay_flag = True
 
-        while episode <= self.M_episodes:
+        while episode < self.M_episodes:
 
-            first_state, derivative_state = self.env.start(episode)
-            this_state = self.choose_columns(first_state, derivative_state)
+            state, stock = self.env.start(episode)
+            this_state = np.concatenate((state, np.array([float(stock)])), axis=0)
 
-            if self.detailed_debug:
+            if episode >= self.detailed_debug_episode:
                 print('EPISODE', episode, 'BEGIN')
 
             end_flag = False
             t = 0
             total_reward = 0.0
-            len_D_flag = False
-            len_D = 0
-            action_stats = [0,0,0]
 
             # run episode
             while (t < self.ep_step_cap) and not end_flag:
                 t += 1
                 prev_state = this_state
 
-                if self.detailed_debug:
+                if episode >= self.detailed_debug_episode:
                     print('   EPISODE', episode, 'STEP', t)
                     print('     this_state', this_state)
 
                 # With probability e select a random action
-                # my_r = np.random.random()
-                # if my_r < self.epsilon:
-                #     action = np.random.randint(-1, 2)
-                #     if self.detailed_debug:
-                #         print('     random action', self.actions_dict[action + 1])
-                # else:
-                #     Q_value = self.Q_nn.predict_on_batch(np.array([this_state]))
-                #
-                #     # convert action range (0, 1, 2) to (-1, 0, 1)
-                #     action = np.argmax(Q_value[0]) - 1
-                #     if self.detailed_debug:
-                #         print('     REAL action distribution')
-                #         print('         Buy:', Q_value[0][2])
-                #         print('         Hold:', Q_value[0][1])
-                #         print('         Sell:', Q_value[0][0])
-                #         print('         Resulting action:', self.actions_dict[action + 1])
+                my_r = np.random.random()
+                if my_r < self.epsilon:
+                    action = np.random.randint(-1, 2)
+                    if episode >= self.detailed_debug_episode:
+                        print('     random action', self.actions_dict[action + 1])
+                else:
+                    Q_value = self.Q_nn.predict_on_batch(np.array([this_state]))
 
-                action = 1
-
-                action_stats[action+1] += 1
+                    # convert action range (0, 1, 2) to (-1, 0, 1)
+                    action = np.argmax(Q_value[0]) - 1
+                    if episode >= self.detailed_debug_episode:
+                        print('     REAL action distribution')
+                        print('         Buy:', Q_value[0][2])
+                        print('         Hold:', Q_value[0][1])
+                        print('         Sell:', Q_value[0][0])
+                        print('         Resulting action:', self.actions_dict[action + 1])
 
                 # Execute action a_t in emulator and observe reward r_t and image x_t+1
-                first_state, derivative_state, reward, end_flag = self.env.action(action)
-                next_state = self.choose_columns(first_state, derivative_state)
+                state, stock, reward, end_flag = self.env.action(action)
+                next_state = np.concatenate((state, np.array([float(stock)])), axis=0)
 
-                if self.detailed_debug:
+                if episode >= self.detailed_debug_episode:
                     print('     reward for the action:', reward)
 
                 total_reward += reward
@@ -166,27 +144,19 @@ class Agent(object):
                 self.D_memory.append([reward, action, this_state, end_flag, next_state])
                 this_state = next_state
 
-                if not len_D_flag:
-                    len_D = len(self.D_memory)
-                    if len_D > self.D_N:
-                        len_D = self.D_N
-                        len_D_flag = True
-                        self.D_memory.pop(0)
-                    else:
-                        # don't start training until we have full D memory
-                        do = 'nothing'
-                        # continue
-                else:
-                    # keep first memories
-                    # self.D_memory.pop(self.D_N // 2)
+                # keep memory length fixed
+                if len(self.D_memory) > self.D_N:
                     self.D_memory.pop(0)
 
                 # wait until we have some transitions in D memory
-                if len_D < self.minibatch:
+                if len(self.D_memory) < self.minibatch:
                     continue
 
                 # Sample random mini-batch of transitions from D
-                batch = random.sample(self.D_memory, self.minibatch)
+                if self.batch_training:
+                    batch = random.sample(self.D_memory, self.minibatch)
+                else:
+                    batch = np.array([np.copy(self.D_memory[len(self.D_memory) - 1])])
 
                 # list of states from the batch
                 this_state_batch = np.array([i[2] for i in batch])
@@ -201,7 +171,9 @@ class Agent(object):
                 for i in range(len(batch)):
 
                     b_reward = batch[i][0]
-                    b_action = batch[i][1]
+
+                    # converting range [-1; 0; 1] to q action range [0; 1; 2]
+                    b_action = batch[i][1] + 1
                     b_end_flag = batch[i][3]
 
                     y_value = b_reward
@@ -217,12 +189,12 @@ class Agent(object):
                 self.Q_nn.train_on_batch(this_state_batch, values_batch_np)
 
                 # printing statistics
-                if self.detailed_debug:
+                if episode >= self.detailed_debug_episode:
                     Q_value = self.Q_nn.predict_on_batch(np.array([prev_state]))
 
                     # convert action range (0, 1, 2) to (-1, 0, 1)
                     action = np.argmax(Q_value[0]) - 1
-                    if self.detailed_debug:
+                    if episode >= self.detailed_debug_episode:
                         print('     UPDATED action distribution')
                         print('         Buy:', Q_value[0][2])
                         print('         Hold:', Q_value[0][1])
@@ -252,7 +224,7 @@ class Agent(object):
             # printing statistics about finished episode
             if self.debug:
                 # self.env.render()
-                print('total_reward', total_reward, 'episode', episode, 'Stats: buy', action_stats[2], 'hold', action_stats[1], 'sell', action_stats[0], 'total', sum(action_stats))
+                print('total_reward', total_reward, 'episode', episode)
 
             # increasing episode counter
             episode += 1
@@ -261,12 +233,11 @@ class Agent(object):
         # now let's see what we've learned
 
         for q in range(self.T_episodes):
-            first_state, derivative_state = self.env.start(self.M_episodes + 1 + q)
-            state = self.choose_columns(first_state, derivative_state)
+            state, stock = self.env.start(self.M_episodes + q)
+            state = np.concatenate((state, np.array([float(stock)])), axis=0)
             i = 0
             end_flag = False
             t_reward = 0
-            action_stats = [0, 0, 0]
 
             while (i < self.ep_step_cap) and not end_flag:
                 i += 1
@@ -276,14 +247,13 @@ class Agent(object):
                 action = np.argmax(Q_value[0]) - 1
 
                 # perform action
-                first_state, derivative_state, reward, end_flag = self.env.action(action)
-                state = self.choose_columns(first_state, derivative_state)
+                state, derivative_state, reward, end_flag = self.env.action(action)
+                state = np.concatenate((state, np.array([float(stock)])), axis=0)
 
-                action_stats[action+1] += 1
                 t_reward += reward
 
             if self.debug:
-                print('t_reward', t_reward, 'episode', q, 'Stats: buy', action_stats[2], 'hold', action_stats[1], 'sell', action_stats[0], 'total', sum(action_stats))
+                print('t_reward', t_reward, 'episode', q)
 
             self.trained_rewards.append(t_reward)
 
