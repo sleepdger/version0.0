@@ -5,7 +5,7 @@ class Environment(object):
         self.whoami = 'environment'
         self.data = []
         self.episode_length = 1000
-        self.data_length = int(100 * 1.2 * self.episode_length)
+        self.data_length = int(1000 * 1.2 * self.episode_length)
         self.episode_step = 0
         self.episode_num = 0
 
@@ -19,6 +19,7 @@ class Environment(object):
         self.fee = 0.0005
 
         # Массив решений action и stock
+        # trying without short option
         self.scheme = [[-1, -1, 1],  # stock = -1
                        [0, 0, 1],  # stock = 0
                        [0, 1, 1]]  # stock = 1
@@ -39,6 +40,12 @@ class Environment(object):
 
         return len(array[0]) + 1
 
+    def getdata(self, row):
+
+        result = np.array([self.data[row][1]])  # let's take only the price change
+
+        return result
+
     def start(self, episode_num):
 
         self.total = self.start_balance
@@ -46,8 +53,9 @@ class Environment(object):
         self.stock = self.start_stock
         self.episode_step = 0
         self.episode_num = episode_num
+        return_state = self.getdata(episode_num * self.episode_length)
 
-        return self.data[episode_num * self.episode_length], self.stock
+        return return_state, self.stock
 
     def action(self, action):
 
@@ -55,6 +63,7 @@ class Environment(object):
         current_step = self.episode_num * self.episode_length + self.episode_step
         prev_state = self.data[current_step - 1]
         new_state = self.data[current_step]
+        return_state = self.getdata(current_step)
 
         new_stock = self.scheme[self.stock + 1][action + 1]
         diff_stock = new_stock - self.stock
@@ -79,4 +88,4 @@ class Environment(object):
         self.total = new_total
         self.stock = new_stock
 
-        return new_state, self.stock, reward, end_flag
+        return return_state, self.stock, reward, end_flag

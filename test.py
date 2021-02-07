@@ -12,12 +12,13 @@ class Agent(object):
     def __init__(self):
         self.whoami = 'agent'
         self.env = en.Environment()
-        self.columns = self.env.loaddata()
+        self.env.loaddata()
+        self.columns = len(self.env.getdata(0)) + 1  # adding one for the returned stock
 
         # general parameters
         self.ep_step_cap = 1000
         self.debug = True
-        self.detailed_debug_episode = 0
+        self.detailed_debug_episode = 1000
         self.num_actions = 3
         self.actions_dict = ['Sell', 'Do nothing', 'Buy']
 
@@ -28,18 +29,19 @@ class Agent(object):
         self.D_memory = []
 
         # parameters
-        self.M_episodes = 100
-        self.T_episodes = 10
+        self.M_episodes = 100  # keep it 1000 at least
+        self.T_episodes = 100
 
         # learned parameters
-        self.gamma = 0.0  # random price change
-        self.batch_training = False
-        self.minibatch = 32
+        self.gamma = 0.0  # random price change, no value inferred from future rewards
         self.epsilon = 1.0  # 1.0
-        self.epsilon_decay = 0.9  # 0.9 for 100 training episodes
-        self.epsilon_bound = 0.1  # 0.1
-        self.C_step = 10
-        self.alpha = 0.1
+        self.epsilon_decay = 0.9  # 0.9 for 100. 0.997 for 1000
+        self.epsilon_bound = 0.1  # 0.1 keep it
+        self.C_step = 200  # it's hard to tell. 200 worked well for Lunar lander
+        self.alpha = 0.001  # 0.001 is better, keep it
+
+        self.batch_training = False  # update only based on the recent experience
+        self.minibatch = 32
         self.D_N = 10000
 
         # Initialize action-value function Q
@@ -189,17 +191,16 @@ class Agent(object):
                 self.Q_nn.train_on_batch(this_state_batch, values_batch_np)
 
                 # printing statistics
-                if episode >= self.detailed_debug_episode:
-                    Q_value = self.Q_nn.predict_on_batch(np.array([prev_state]))
+                Q_value = self.Q_nn.predict_on_batch(np.array([prev_state]))
 
-                    # convert action range (0, 1, 2) to (-1, 0, 1)
-                    action = np.argmax(Q_value[0]) - 1
-                    if episode >= self.detailed_debug_episode:
-                        print('     UPDATED action distribution')
-                        print('         Buy:', Q_value[0][2])
-                        print('         Hold:', Q_value[0][1])
-                        print('         Sell:', Q_value[0][0])
-                        print('         Resulting action:', self.actions_dict[action + 1])
+                # convert action range (0, 1, 2) to (-1, 0, 1)
+                action = np.argmax(Q_value[0]) - 1
+                if episode >= self.detailed_debug_episode:
+                    print('     UPDATED action distribution')
+                    print('         Buy:', Q_value[0][2])
+                    print('         Hold:', Q_value[0][1])
+                    print('         Sell:', Q_value[0][0])
+                    print('         Resulting action:', self.actions_dict[action + 1])
 
                 # Every C steps reset target weights
                 c += 1
