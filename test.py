@@ -12,7 +12,7 @@ class Agent(object):
     def __init__(self):
         self.whoami = 'agent'
         self.env = en.Environment()
-        self.env.loaddata('leak')  # random, leak
+        self.env.loaddata('oldprice')  # random, leak, oldprice
         self.columns = len(self.env.getdata(0)) + 1  # adding one for the returned stock
 
         # general parameters
@@ -30,11 +30,11 @@ class Agent(object):
 
         # parameters
         self.M_episodes = 100  # keep it 1000 at least
-        self.T_episodes = 50
+        self.T_episodes = 100
 
         # learned parameters
         self.epsilon = 1.0  # 1.0
-        self.epsilon_decay = 0.9  # 0.9 = 100, 0.997 = 1000, 0.99 = 100
+        self.epsilon_decay = 0.9  # 0.9 = 100, 0.997 = 1000, 0.99 = 300
         self.epsilon_bound = 0.1  # 0.1 keep it
         self.alpha = 0.001  # 0.001 is better, keep it
 
@@ -43,7 +43,7 @@ class Agent(object):
         self.gamma = 0.0  # random price change, no value inferred from future rewards
         self.batch_training = False  # update only based on the recent experience
         self.minibatch = 32
-        self.D_N = 10000
+        self.D_N = 40000  # it's hard to tell. 40k worked well for Lunar lander
 
         # Initialize action-value function Q
         self.Q_nn = self.dqn_nn()
@@ -68,7 +68,7 @@ class Agent(object):
         what_to_draw = len(rewards) - episodes
         rewards_to_draw = list(rewards[what_to_draw:])
 
-        avg_reward = str(round(sum(rewards) / episodes, 1))
+        total_reward = str(round(sum(rewards), 2))
         filename_string = "A_" + str(self.alpha) + "_ED_" + str(self.epsilon_decay) + "_EB_" + str(
             self.epsilon_bound) + "_B_" + str(self.minibatch) + "_C_" + str(self.C_step) + "_D_" + str(
             self.D_N)
@@ -82,7 +82,7 @@ class Agent(object):
         plt.ylabel('reward')
         title_string = title
         if flag:
-            title_string += " (avg.reward: " + avg_reward + ")"
+            title_string += " (total.reward: " + total_reward + ")"
         plt.title(title_string)
         plt.grid(True)
 

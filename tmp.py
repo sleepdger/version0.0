@@ -8,10 +8,10 @@ from tensorflow.python.framework.ops import disable_eager_execution
 tf.compat.v1.disable_eager_execution()
 disable_eager_execution()
 
-epsilon_decay = 0.997
+epsilon_decay = 0.99
 epsilon_bound = 0.1
 epsilon = 1.0
-M_episodes = 1000
+M_episodes = 300
 epsilon_array = []
 
 for i in range(M_episodes):
