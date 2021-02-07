@@ -16,33 +16,67 @@ class Environment(object):
         self.total = 1000
         self.stock = 0
 
-        self.fee = 0.0005
+        # self.fee = 0.0005
+        self.fee = 0.0000
 
-        # Массив решений action и stock
-        # trying without short option
-        self.scheme = [[-1, -1, 1],  # stock = -1
-                       [0, 0, 1],  # stock = 0
-                       [0, 1, 1]]  # stock = 1
+        self.data_structure = 'random'
 
-    def loaddata(self):
+        # without short option
+        # self.scheme = [[-1, -1, 1],  # when your stock = -1
+        #                [0, 0, 1],    # when your stock = 0
+        #                [0, 1, 1]]    # when your stock = 1
 
-        array = np.random.rand(2, self.data_length)
-        array[0] = array[0] * 100.0 + 200.0
-        array[1] = 0.0
-        array = np.round(np.transpose(array), 2)
+        # with short option
+        self.scheme = [[-1, -1, 1],   # when your stock = -1
+                       [-1, 0, 1],    # when your stock = 0
+                       [-1, 1, 1]]    # when your stock = 1
 
-        i = 0
-        while i + 1 < len(array):
-            array[i][1] = array[i + 1][0] - array[i][0]
-            i += 1
 
-        self.data = np.copy(array)
+    def loaddata(self, mode):
 
-        return len(array[0]) + 1
+        # episod
+        # price
+        # Volume
+        # VolumeData
+        # VolumeDeltaCum
+        # TradesCount
+        # TradesCountDelta
+        # TradesCountDeltaCum
+        # IMOEX.price
+        # data-leak
+
+        if mode == 'random':
+            self.data_structure = 'random'
+            array = np.random.rand(2, self.data_length)
+            array[0] = array[0] * 100.0 + 200.0
+            array[1] = 0.0
+            array = np.round(np.transpose(array), 2)
+
+            i = 0
+            while i + 1 < len(array):
+                self.data.append({'price': array[i][0], 'data-leak': array[i + 1][0]})
+                i += 1
+
+        elif mode == 'leak':
+            self.data_structure = 'leak'
+            import csv
+            with open("sberdata_leak.csv", newline='') as csvfile:
+                reader = csv.DictReader(csvfile, delimiter=";")
+
+                for row in reader:
+                    for value in row:
+                        row[value] = row[value].replace(",", ".")
+                        row[value] = row[value].replace(" ", "")
+                    self.data.append(row)
+        else:
+            pass
+
+        pass
 
     def getdata(self, row):
 
-        result = np.array([self.data[row][1]])  # let's take only the price change
+        result = np.array(
+            [float(self.data[row]['data-leak']) - float(self.data[row]['price'])])  # let's take only the price change
 
         return result
 
@@ -68,8 +102,8 @@ class Environment(object):
         new_stock = self.scheme[self.stock + 1][action + 1]
         diff_stock = new_stock - self.stock
 
-        old_price = prev_state[0]
-        new_price = new_state[0]
+        old_price = float(prev_state['price'])
+        new_price = float(new_state['price'])
 
         # Расчет комиссии с транзакции
         if diff_stock != 0:
