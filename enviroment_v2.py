@@ -6,7 +6,9 @@ class Environment(object):
         self.reward_f = 'close'  # vanila, close
         self.data = []
         self.episode_length = 1000
-        self.data_length = int(1000 * 1.2 * self.episode_length)
+
+        self.data_length = int(1000 * 1.2 * self.episode_length)  # works only if we generate data
+
         self.episode_step = 0
         self.episode_num = 0
 
@@ -18,8 +20,8 @@ class Environment(object):
         self.stock = 0
         self.stock_price = 0
 
-        # self.fee = 0.0005
-        self.fee = 0.0000
+        self.fee = 0.0002
+        # self.fee = 0.0000
 
         self.data_structure = ''
 
@@ -29,9 +31,14 @@ class Environment(object):
         #                [0, 1, 1]]    # when your stock = 1
 
         # without short option,
-        self.scheme = [[0, 0, 0],  # when your stock = -1
-                       [0, 0, 100],    # when your stock = 0
-                       [0, 100, 100]]    # when your stock = 1
+        # self.scheme = [[0, 0, 0],  # when your stock = -1
+        #                [0, 0, 100],    # when your stock = 0
+        #                [0, 100, 100]]    # when your stock = 1
+
+        # with short option - moderate
+        self.scheme = [[-10, -10, 0],  # when your stock = -1
+                       [-10, 0, 10],    # when your stock = 0
+                       [0, 10, 10]]    # when your stock = 1
 
         # with short option - extreme
         # self.scheme = [[-1, -1, 1],   # when your stock = -1
@@ -92,7 +99,8 @@ class Environment(object):
         elif self.data_structure == 'oldprice':
             result = np.array(
                 [float(self.data[row][
-                           'price']) - self.stock_price])  # let's pass the diff between history price & current price
+                           'price']) * (
+                             1.0 - self.fee) - self.stock_price])  # let's pass the diff between history price & current price
         else:
             result = np.array([])
 

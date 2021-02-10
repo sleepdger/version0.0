@@ -2,11 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ddd43f57-f877-45cb-9c3e-ba93e7cff41c" name="Default Changelist" comment="feb 5">
-      <change afterPath="$PROJECT_DIR$/tmp_csv.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/A_0.005_ED_0.995_EB_0.1_B_32_C_1_D_40000_running_tr.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/A_0.005_ED_0.995_EB_0.1_B_32_C_1_D_40000_training_tr.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/enviroment_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/enviroment_v2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tmp.py" beforeDir="false" afterPath="$PROJECT_DIR$/tmp.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -187,7 +187,14 @@
       <option name="project" value="LOCAL" />
       <updated>1612715236786</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="it's alive, aliiiiiiiiive">
+      <created>1612722668721</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1612722668721</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

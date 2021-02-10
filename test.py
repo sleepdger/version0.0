@@ -29,18 +29,18 @@ class Agent(object):
         self.D_memory = []
 
         # parameters
-        self.M_episodes = 100  # keep it 1000 at least
-        self.T_episodes = 100
+        self.M_episodes = 300  # keep it 1000 at least
+        self.T_episodes = 30
 
         # learned parameters
         self.epsilon = 1.0  # 1.0
-        self.epsilon_decay = 0.9  # 0.9 = 100, 0.997 = 1000, 0.99 = 300
+        self.epsilon_decay = 0.99  # 0.9 = 100, 0.997 = 1000, 0.99 = 300
         self.epsilon_bound = 0.1  # 0.1 keep it
         self.alpha = 0.001  # 0.001 is better, keep it
 
         # to be tuned
         self.C_step = 200  # it's hard to tell. 200 worked well for Lunar lander
-        self.gamma = 0.0  # random price change, no value inferred from future rewards
+        self.gamma = 0.99  # random price change, no value inferred from future rewards
         self.batch_training = False  # update only based on the recent experience
         self.minibatch = 32
         self.D_N = 40000  # it's hard to tell. 40k worked well for Lunar lander
